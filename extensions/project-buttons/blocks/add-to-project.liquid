@@ -228,7 +228,10 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   function handleSmartFetch(url) {
-    return fetch(url)
+    // no-store: guards against Shopify's App Proxy edge layer caching this
+    // per-customer response — without it, a room/project just created can
+    // appear missing on the very next fetch.
+    return fetch(url, { cache: 'no-store' })
       .then(response => response.text())
       .then(text => {
         if (text.trim().startsWith('<!DOCTYPE')) {
