@@ -212,10 +212,11 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = false;
       })
       .finally(() => {
-        if (modal.style.display === 'flex') {
-          submitBtn.innerText = "ADD NOW";
-          submitBtn.disabled = false;
-        }
+        // Always reset, regardless of whether the modal is still open — on a
+        // successful add the modal is already hidden by this point, but the
+        // button itself must still be re-armed for the next time it's reopened.
+        submitBtn.innerText = "ADD NOW";
+        submitBtn.disabled = false;
       });
 
     } catch (clientError) {
