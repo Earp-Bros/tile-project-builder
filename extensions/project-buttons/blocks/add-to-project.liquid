@@ -105,9 +105,25 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }, 50);
 
+  // Clears any leftover "+ Create New..." text/selection from a previous open,
+  // so a stale typed name can never be silently resubmitted (which duplicated
+  // the project/room, since the payload always sends the input's raw value
+  // regardless of what's currently selected in the dropdown).
+  function resetModalState() {
+    projectSelect.value = '';
+    newProjectInput.value = '';
+    newProjectInput.style.display = 'none';
+
+    sectionWrapper.style.display = 'none';
+    sectionSelect.innerHTML = '<option value="">Select/Add Room/Area</option>';
+    newSectionInput.value = '';
+    newSectionInput.style.display = 'none';
+  }
+
   // Primary Button Routing Logic — always opens the modal; this button never
   // mutates into a navigation link, so multiple items can be added per page visit.
   triggerBtn.addEventListener('click', function() {
+    resetModalState();
     modal.style.display = 'flex';
     loadProjects();
   });
