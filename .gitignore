@@ -33,4 +33,10 @@ shared/types/graphql
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
+*.sw?!.env.example
+*.pem
+*.key
+*.p12
+service-account*.json
+.claude/settings.local.json
+reports/
