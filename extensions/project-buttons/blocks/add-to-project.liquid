@@ -18,6 +18,11 @@
   <span id="ep-trigger-text">Add to My Project</span>
 </button>
 
+<button type="button" id="ep-view-projects-btn"
+        style="display: none; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 15px; background-color: #000; color: #fff; border: 1px solid #000; transition: all 0.3s ease;">
+  VIEW MY PROJECTS
+</button>
+
 <div id="epProjectModal" style="display: none; position: fixed; z-index: 999999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; font-family: sans-serif;">
   <div style="background: #fff; padding: 30px; border-radius: 8px; width: 90%; max-width: 460px; box-shadow: 0 4px 25px rgba(0,0,0,0.15); position: relative; box-sizing: border-box;">
     
@@ -60,6 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const newSectionInput = document.getElementById('ep-new-section-input');
   const sectionWrapper = document.getElementById('ep-section-wrapper');
   const submitBtn = document.getElementById('ep-submit-add-btn');
+  const viewProjectsBtn = document.getElementById('ep-view-projects-btn');
 
   const productHandle = "{{ product.handle }}";
   const customerId = "{{ customer.id }}".trim(); 
@@ -99,14 +105,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }, 50);
 
-  // Primary Button Routing Logic
+  // Clears any leftover "+ Create New..." text/selection from a previous open,
+  // so a stale typed name can never be silently resubmitted (which duplicated
+  // the project/room, since the payload always sends the input's raw value
+  // regardless of what's currently selected in the dropdown).
+  function resetModalState() {
+    projectSelect.value = '';
+    newProjectInput.value = '';
+    newProjectInput.style.display = 'none';
+
+    sectionWrapper.style.display = 'none';
+    sectionSelect.innerHTML = '<option value="">Select/Add Room/Area</option>';
+    newSectionInput.value = '';
+    newSectionInput.style.display = 'none';
+  }
+
+  // Primary Button Routing Logic — always opens the modal; this button never
+  // mutates into a navigation link, so multiple items can be added per page visit.
   triggerBtn.addEventListener('click', function() {
-    if (triggerBtn.getAttribute('data-state', 'view-mode')) {
-      window.location.href = '/apps/projects';
-    } else {
-      modal.style.display = 'flex';
-      loadProjects(); 
-    }
+    resetModalState();
+    modal.style.display = 'flex';
+    loadProjects();
+  });
+
+  viewProjectsBtn.addEventListener('click', function() {
+    window.location.href = '/apps/projects';
   });
 
   closeModal.addEventListener('click', () => modal.style.display = 'none');
@@ -192,13 +215,11 @@ document.addEventListener('DOMContentLoaded', function() {
       })
       .then(data => {
         if (!data.success) throw new Error(data.error || "Supabase database error");
-        
+
         modal.style.display = 'none';
-        document.getElementById('ep-trigger-text').innerText = "VIEW IN MY PROJECTS";
-        document.getElementById('ep-heart-icon').setAttribute('fill', 'currentColor');
-        triggerBtn.setAttribute('data-state', 'view-mode');
-        triggerBtn.style.background = "#000";
-        triggerBtn.style.color = "#fff";
+        // Add button stays exactly as-is — only reveal the separate nav button,
+        // so the user can keep adding more items without leaving the page.
+        viewProjectsBtn.style.display = 'flex';
       })
       .catch(err => {
         console.error("Network endpoint catch triggered:", err);
@@ -207,10 +228,11 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = false;
       })
       .finally(() => {
-        if (modal.style.display === 'flex') {
-          submitBtn.innerText = "ADD NOW";
-          submitBtn.disabled = false;
-        }
+        // Always reset, regardless of whether the modal is still open — on a
+        // successful add the modal is already hidden by this point, but the
+        // button itself must still be re-armed for the next time it's reopened.
+        submitBtn.innerText = "ADD NOW";
+        submitBtn.disabled = false;
       });
 
     } catch (clientError) {
@@ -222,7 +244,10 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   function handleSmartFetch(url) {
-    return fetch(url)
+    // no-store: guards against Shopify's App Proxy edge layer caching this
+    // per-customer response — without it, a room/project just created can
+    // appear missing on the very next fetch.
+    return fetch(url, { cache: 'no-store' })
       .then(response => response.text())
       .then(text => {
         if (text.trim().startsWith('<!DOCTYPE')) {

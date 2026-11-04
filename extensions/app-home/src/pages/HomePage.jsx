@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'preact/hooks';
 
+// Z4: prove to the Render backend which shop and admin user is calling, using
+// Shopify's own session token (short-lived, signed by Shopify; no secret lives
+// in this page). The backend rejects settings requests without it.
+async function authHeaders(extra = {}) {
+  const token = await shopify.auth.idToken();
+  return token ? { ...extra, Authorization: `Bearer ${token}` } : extra;
+}
+
 export default function HomePage() {
   const [shopDomain, setShopDomain] = useState('');
   const [companyName, setCompanyName] = useState('EARP BROS');
@@ -31,7 +39,10 @@ export default function HomePage() {
 
     (async () => {
       try {
-        const res = await fetch(`https://shopify-projects-app.onrender.com/api/admin/get-settings?shop=${shop}`);
+        const res = await fetch(`https://shopify-projects-app.onrender.com/api/admin/get-settings?shop=${encodeURIComponent(shop)}`, {
+          headers: await authHeaders(),
+        });
+        if (!res.ok) shopify.toast.show(`❌ Could not load settings (HTTP ${res.status}).`);
         if (res.ok) {
           const data = await res.json();
           if (data.settings) {
@@ -87,7 +98,7 @@ export default function HomePage() {
     try {
       const res = await fetch('https://shopify-projects-app.onrender.com/api/admin/update-settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
       
